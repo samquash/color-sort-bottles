@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Color Sort Bottles</title>
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1a26">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Color Sort">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#eef3f7; --panel:#ffffff; --ink:#1d2b3a; --muted:#6a7b8c; --glass:#ffffffaa; --edge:#9db2c4; --accent:#2563eb; --shadow:#1d2b3a22;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#0f1a26; --panel:#182635; --ink:#e8f0f7; --muted:#8aa0b4; --glass:#ffffff14; --edge:#4b6379; --accent:#60a5fa; --shadow:#00000055;}
+}
+:root[data-theme="dark"]{--bg:#0f1a26; --panel:#182635; --ink:#e8f0f7; --muted:#8aa0b4; --glass:#ffffff14; --edge:#4b6379; --accent:#60a5fa; --shadow:#00000055;}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Fredoka",system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;flex-direction:column;align-items:center;-webkit-tap-highlight-color:transparent;user-select:none}
+header{width:100%;max-width:560px;display:flex;flex-wrap:wrap;gap:6px;justify-content:space-between;align-items:center;padding:14px 18px 6px}
+h1{font-size:1.25rem;margin:0;font-weight:700}
+.stats{display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:var(--muted);font-size:.95rem}
+#snd{padding:2px 10px;border-radius:12px;font-size:1rem;box-shadow:none}
+.stats b{color:var(--ink)}
+main{flex:1;width:100%;max-width:560px;display:flex;align-items:center;justify-content:center;padding:10px 12px}
+#board{display:flex;flex-wrap:wrap;justify-content:center;gap:26px 16px}
+.tube{width:46px;height:calc(var(--sh,40px)*var(--cap,4) + 16px);border:3px solid var(--edge);border-top:none;border-radius:0 0 24px 24px;background:var(--glass);display:flex;flex-direction:column-reverse;padding:3px;gap:0;cursor:pointer;position:relative;transition:transform .18s ease,box-shadow .18s ease;box-shadow:0 6px 14px var(--shadow)}
+.tube::before{content:"";position:absolute;left:-6px;right:-6px;top:-4px;height:6px;border-radius:4px;background:var(--edge)}
+.tube.sel{transform:translateY(-16px);border-color:var(--accent);box-shadow:0 14px 18px var(--shadow)}
+.tube:focus-visible{outline:3px solid var(--accent);outline-offset:4px}
+.seg{flex:0 0 auto;height:var(--sh,40px);position:relative;background-image:linear-gradient(90deg,#ffffff47,#ffffff00 45%,#00000026);transition:background-color .2s}
+.seg:first-child{border-radius:0 0 20px 20px}
+.seg:last-child::after{content:"";position:absolute;left:0;right:0;top:-4px;height:8px;border-radius:50%;background:inherit;filter:brightness(1.3)}
+.tube::after{content:"";position:absolute;left:6px;top:8px;bottom:20px;width:5px;border-radius:4px;background:#ffffff55;pointer-events:none}
+.tube.done{border-color:#22c55e}
+#board.small{gap:22px 12px}
+#board.small .tube{width:38px}
+.seg{box-shadow:inset 0 0 0 1px #00000018}
+footer{width:100%;max-width:560px;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:8px 18px 22px}
+button{font:inherit;font-weight:700;color:var(--ink);background:var(--panel);border:2px solid var(--edge);border-radius:14px;padding:10px 18px;cursor:pointer;box-shadow:0 3px 0 var(--edge)}
+button:active{transform:translateY(2px);box-shadow:0 1px 0 var(--edge)}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 3px 0 #1e40af}
+#win{position:fixed;inset:0;background:#0009;display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
+#win.show{display:flex}
+.card{background:var(--panel);border-radius:22px;padding:26px 28px;text-align:center;max-width:320px;width:100%}
+.card h2{margin:0 0 6px;font-size:1.5rem}
+.card p{margin:0 0 18px;color:var(--muted)}
+#ad{position:fixed;inset:0;background:#0009;display:none;align-items:center;justify-content:center;padding:20px;z-index:30}
+#ad.show{display:flex}
+.card button{margin:4px}
+.tube.hint{border-color:#f59e0b;animation:pulse 1s ease-in-out infinite}
+.tube.hint.from{transform:translateY(-10px)}
+@keyframes pulse{50%{box-shadow:0 0 0 6px #f59e0b66}}
+@media (prefers-reduced-motion:reduce){.tube,.seg{transition:none}.tube.hint{animation:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Color Sort Bottles</h1>
+  <div class="stats"><span>Level <b id="lvl">1</b></span><span>Moves <b id="mv">0</b></span><span>🪙 <b id="coins">0</b></span><button id="snd" aria-label="Sound on or off">🔊</button></div>
+</header>
+<main><div id="board" role="group" aria-label="Bottles"></div></main>
+<footer>
+  <button id="undo">Undo</button>
+  <button id="restart">Restart</button>
+  <button id="skip">New mix</button>
+  <button id="hint" class="primary">Hint · 20 🪙</button>
+</footer>
+<div id="win" role="dialog" aria-modal="true">
+  <div class="card">
+    <h2>Level complete!</h2>
+    <p id="winmsg"></p>
+    <button class="primary" id="next">Next level</button>
+  </div>
+</div>
+<div id="ad" role="dialog" aria-modal="true">
+  <div class="card">
+    <h2 id="adt">Need a hint?</h2>
+    <p id="adm"></p>
+    <button class="primary" id="adgo">Watch ad</button>
+    <button id="adno">Cancel</button>
+  </div>
+</div>
+<script>
+(function(){
+  var COLORS=["#e63946","#1e3a8a","#f9a8d4","#22c55e","#14b8a6","#3b82f6","#8b5cf6","#ec4899","#92400e","#84cc16","#22d3ee","#9ca3af","#1f2937","#f8fafc"];
+  var CAP=4, level=1, tubes=[], start=[], history=[], moves=0, sel=-1;
+  var TOTAL=200, HINT_COST=20, WIN_COINS=15, coins=0, muted=false, hintPair=null;
+  try{ var s=parseInt(localStorage.getItem("csb-level"),10); if(s>0) level=Math.min(s,TOTAL); var cn=parseInt(localStorage.getItem("csb-coins"),10); if(cn>=0) coins=cn; muted=localStorage.getItem("csb-mute")==="1"; }catch(e){}
+
+  var board=document.getElementById("board");
+  var lvlEl=document.getElementById("lvl"), mvEl=document.getElementById("mv"), coinEl=document.getElementById("coins"), snd=document.getElementById("snd");
+
+  function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+  function solved(t){ return t.every(function(x){ return x.length===0 || (x.length===CAP && x.every(function(c){return c===x[0];})); }); }
+
+  function generate(){
+    CAP=level>120?6:level>45?5:4;
+    var n=Math.min(3+Math.floor((level-1)/4),14);
+    var pool=[];
+    for(var c=0;c<n;c++) for(var k=0;k<CAP;k++) pool.push(c);
+    var t;
+    do{
+      shuffle(pool); t=[];
+      for(var i=0;i<n;i++) t.push(pool.slice(i*CAP,(i+1)*CAP));
+      t.push([]); t.push([]);
+    }while(solved(t));
+    start=JSON.parse(JSON.stringify(t));
+    load(start);
+  }
+  function load(src){
+    tubes=JSON.parse(JSON.stringify(src)); history=[]; moves=0; sel=-1; hintPair=null; render();
+  }
+  function render(){
+    board.innerHTML=""; board.className=tubes.length>10?"small":"";
+    board.style.setProperty("--cap",CAP); board.style.setProperty("--sh",(CAP>=6?28:(tubes.length>10?34:40))+"px");
+    tubes.forEach(function(t,i){
+      var d=document.createElement("div");
+      d.className="tube"+(i===sel?" sel":"")+(hintPair&&i===hintPair[0]?" hint from":"")+(hintPair&&i===hintPair[1]?" hint":"")+(t.length===CAP&&t.every(function(c){return c===t[0];})?" done":"");
+      d.tabIndex=0; d.setAttribute("role","button"); d.setAttribute("aria-label","Bottle "+(i+1));
+      t.forEach(function(c){ var s=document.createElement("div"); s.className="seg"; s.style.backgroundColor=COLORS[c]; d.appendChild(s); });
+      d.onclick=function(){ tap(i); };
+      d.onkeydown=function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); tap(i); } };
+      board.appendChild(d);
+    });
+    lvlEl.textContent=level+"/"+TOTAL; mvEl.textContent=moves; coinEl.textContent=coins;
+  }
+  function topRun(t){ var c=t[t.length-1],n=0; for(var i=t.length-1;i>=0&&t[i]===c;i--) n++; return n; }
+  function canPour(a,b){
+    if(a===b||!tubes[a].length) return false;
+    var B=tubes[b]; if(B.length>=CAP) return false;
+    return !B.length || B[B.length-1]===tubes[a][tubes[a].length-1];
+  }
+  function tap(i){
+    if(sel===-1){ if(tubes[i].length){ sel=i; sfx("tap"); render(); } return; }
+    if(sel===i){ sel=-1; render(); return; }
+    if(canPour(sel,i)){
+      history.push(JSON.stringify(tubes));
+      var A=tubes[sel],B=tubes[i], n=Math.min(topRun(A),CAP-B.length);
+      for(var k=0;k<n;k++) B.push(A.pop());
+      moves++; sel=-1; hintPair=null; render(); sfx("pour");
+      if(solved(tubes)) win();
+    } else {
+      sfx("bad"); sel=tubes[i].length?i:-1; render();
+    }
+  }
+  function win(){
+    addCoins(WIN_COINS); sfx("win"); var fin=level>=TOTAL;
+    document.getElementById("winmsg").textContent="Solved in "+moves+" moves. +"+WIN_COINS+" coins"+(fin?". You finished all "+TOTAL+" levels!":"");
+    document.getElementById("next").textContent=fin?"Play again":"Next level";
+    document.getElementById("win").classList.add("show");
+    document.getElementById("next").focus();
+  }
+  document.getElementById("undo").onclick=function(){
+    if(!history.length) return;
+    tubes=JSON.parse(history.pop()); moves=Math.max(0,moves-1); sel=-1; hintPair=null; render();
+  };
+  document.getElementById("restart").onclick=function(){ load(start); };
+  document.getElementById("skip").onclick=generate;
+  document.getElementById("next").onclick=function(){
+    document.getElementById("win").classList.remove("show");
+    level=level>=TOTAL?1:level+1; save();
+    generate();
+  };
+  var ac=null;
+  function sfx(k){
+    if(muted) return;
+    try{
+      if(!ac) ac=new (window.AudioContext||window.webkitAudioContext)();
+      if(ac.state==="suspended") ac.resume();
+      if(k==="pour"){
+        var t=ac.currentTime, len=.75, buf=ac.createBuffer(1,Math.floor(ac.sampleRate*len),ac.sampleRate), d=buf.getChannelData(0);
+        for(var i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+        var ns=ac.createBufferSource(); ns.buffer=buf;
+        var fl=ac.createBiquadFilter(); fl.type="bandpass"; fl.Q.value=2.5;
+        fl.frequency.setValueAtTime(500,t); fl.frequency.exponentialRampToValueAtTime(1800,t+len);
+        var ng=ac.createGain(); ng.gain.setValueAtTime(.0001,t); ng.gain.exponentialRampToValueAtTime(.22,t+.08); ng.gain.exponentialRampToValueAtTime(.0001,t+len);
+        ns.connect(fl); fl.connect(ng); ng.connect(ac.destination); ns.start(t);
+        for(var j=0;j<7;j++){
+          var st=t+.04+j*.09, o=ac.createOscillator(), bg=ac.createGain();
+          o.frequency.setValueAtTime(280+Math.random()*320,st); o.frequency.exponentialRampToValueAtTime(900+Math.random()*600,st+.07);
+          bg.gain.setValueAtTime(.0001,st); bg.gain.exponentialRampToValueAtTime(.12,st+.01); bg.gain.exponentialRampToValueAtTime(.0001,st+.08);
+          o.connect(bg); bg.connect(ac.destination); o.start(st); o.stop(st+.1);
+        }
+        return;
+      }
+      var seq={tap:[[660,.06]],bad:[[160,.12,"square"]],pour:[[520,.07],[440,.07],[360,.09]],coin:[[988,.07],[1319,.14]],win:[[523,.12],[659,.12],[784,.12],[1047,.3]],hint:[[880,.08],[1175,.1]]}[k];
+      var at=ac.currentTime;
+      seq.forEach(function(n){
+        var o=ac.createOscillator(),g=ac.createGain();
+        o.type=n[2]||"sine"; o.frequency.value=n[0];
+        g.gain.setValueAtTime(.0001,at); g.gain.exponentialRampToValueAtTime(.18,at+.01); g.gain.exponentialRampToValueAtTime(.0001,at+n[1]);
+        o.connect(g); g.connect(ac.destination); o.start(at); o.stop(at+n[1]+.02); at+=n[1]*.9;
+      });
+    }catch(e){}
+  }
+  function save(){ try{ localStorage.setItem("csb-level",String(level)); localStorage.setItem("csb-coins",String(coins)); localStorage.setItem("csb-mute",muted?"1":"0"); }catch(e){} }
+  function addCoins(n){ coins+=n; save(); render(); }
+  snd.textContent=muted?"🔇":"🔊";
+  snd.onclick=function(){ muted=!muted; snd.textContent=muted?"🔇":"🔊"; save(); sfx("tap"); };
+
+  function findHint(){
+    var best=null,bs=-1;
+    for(var a=0;a<tubes.length;a++){
+      var A=tubes[a]; if(!A.length) continue;
+      var uni=A.every(function(c){return c===A[0];});
+      if(uni&&A.length===CAP) continue;
+      for(var b=0;b<tubes.length;b++){
+        if(!canPour(a,b)) continue;
+        var B=tubes[b];
+        if(!B.length&&uni) continue;
+        var sc=B.length?10+B.length+(uni?5:0):1;
+        if(sc>bs){ bs=sc; best=[a,b]; }
+      }
+    }
+    return best;
+  }
+  function giveHint(){
+    var h=findHint();
+    if(!h){ sfx("bad"); return; }
+    sel=-1; hintPair=h; sfx("hint"); render();
+  }
+  var adEl=document.getElementById("ad"), adBusy=false;
+  function openAd(){
+    document.getElementById("adm").textContent="You have "+coins+" coins. A hint costs "+HINT_COST+". Watch a short ad for a free hint.";
+    document.getElementById("adt").textContent="Need a hint?";
+    document.getElementById("adgo").style.display=""; document.getElementById("adno").style.display="";
+    adEl.classList.add("show");
+  }
+  document.getElementById("hint").onclick=function(){
+    if(!findHint()){ sfx("bad"); return; }
+    if(coins>=HINT_COST){ coins-=HINT_COST; save(); giveHint(); }
+    else openAd();
+  };
+  document.getElementById("adno").onclick=function(){ if(!adBusy) adEl.classList.remove("show"); };
+  document.getElementById("adgo").onclick=function(){
+    adBusy=true; var left=5;
+    document.getElementById("adgo").style.display="none"; document.getElementById("adno").style.display="none";
+    document.getElementById("adt").textContent="Ad playing";
+    var tick=function(){
+      document.getElementById("adm").textContent="Your free hint comes in "+left+"…";
+      if(left--<=0){ adBusy=false; adEl.classList.remove("show"); giveHint(); return; }
+      setTimeout(tick,1000);
+    };
+    tick();
+  };
+  generate();
+})();
+</script>
+</body>
+</html>
